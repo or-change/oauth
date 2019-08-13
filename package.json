@@ -1,0 +1,17 @@
+{
+  "name": "oauth-server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "basic-auth": "^2.0.1",
+    "mocha": "^6.2.0",
+    "should": "^13.2.3",
+    "sinon": "^7.4.0"
+  }
+}
