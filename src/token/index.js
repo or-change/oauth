@@ -1,17 +1,13 @@
-const modelAttributes = [
-	'accessToken', 'accessTokenExpiredAt',
-	'refreshToken', 'refreshTokenExpiredAt',
-	'scope', 'client', 'user'
-];
-
+const modelAttributes = ['accessToken','refreshToken','scope', 'client', 'user'];
 
 module.exports = function (data, options) {
 	const {
-		accessToken, accessTokenExpiredAt,
-		refreshToken, refreshTokenExpiredAt,
-		scope, user, client
+		accessToken,
+		refreshToken,
+		scope,
+		user,
+		client
 	} = data;
-	const accessTokenLifeTime = Math.floor(accessTokenExpiredAt - new Date());
 
 	if (!accessToken) {
 		throw new Error('Missing parameter: `accessToken`');
@@ -25,22 +21,14 @@ module.exports = function (data, options) {
 		throw new Error('Missing parameter: `user`');
 	}
 
-	if (accessTokenExpiredAt && !(accessTokenExpiredAt instanceof Date)) {
-		throw new Error('Invalid parameter: `accessTokenExpiredAt`');
-	}
-
-	if (refreshTokenExpiredAt && !(refreshTokenExpiredAt instanceof Date)) {
-		throw new Error('Invalid parameter: `refreshTokenExpiredAt`');
-	}
-
-
 	return {
-		accessToken, accessTokenExpiredAt,
-		refreshToken, refreshTokenExpiredAt,
-		user, client, scope,
-		accessTokenLifeTime,
+		accessToken,
+		refreshToken,
+		user,
+		client,
+		scope,
 		customAttributes: () => {
-			if (options && options.allowExtendedTokenAttributes) {
+			if (options && options.extensible) {
 				const customAttributes = {};
 
 				for (var key in data) {

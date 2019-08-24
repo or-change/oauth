@@ -1,21 +1,19 @@
-const url = require('url');
-
-exports.Code = function codeResponseType(code) {
-	if (!code) {
+exports.Code = function codeResponseType({codeId, state = null}) {
+	if (!codeId) {
 		throw new Error('Missing parameter: `code`');
 	}
 
 	return {
-		code,
 		buildRedirectUri(redirectUri) {
 			if(!redirectUri) {
 				return new Error('Missing parameter: `redirectUri`');
 			}
 
-			const uri = url.parse(redirectUri, true);
-
-			uri.query.code = this.code;
-			uri.search = null;
+			const uri = new URL(redirectUri);
+			uri.search = new URLSearchParams({
+				code: codeId,
+				state
+			});
 
 			return uri;
 		} 

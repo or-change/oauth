@@ -9,9 +9,11 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "basic-auth": "^2.0.1",
-    "mocha": "^6.2.0",
-    "should": "^13.2.3",
-    "sinon": "^7.4.0"
+    "ajv": "^6.10.2",
+    "ajv-keywords": "^3.4.1",
+    "ejs": "^2.6.2"
+  },
+  "devDependencies": {
+    "mocha": "^6.2.0"
   }
 }

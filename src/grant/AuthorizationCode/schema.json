@@ -1,0 +1,51 @@
+{
+	"type": "object",
+	"additionalProperties": false,
+	"properties": {
+		"path": {
+			"type": "object",
+			"addtionalProperties": false,
+			"properties": {
+				"authorize": {
+					"type": "string"
+				},
+				"approve": {
+					"type": "string"
+				}
+			}
+		},
+		"code": {
+			"type": "object",
+			"addtionalProperties": false,
+			"properties": {
+				"lifetime": {
+					"type": "number"
+				},
+				"allowEmptyState": {
+					"type": "boolean"
+				},
+				"store": {
+					"addtionalProperties": false,
+					"type": "object",
+					"properties": {
+						"save": {
+							"instanceof": "Function"
+						},
+						"get": {
+							"instanceof": "Function"
+						},
+						"revoke": {
+							"instanceof": "Function"
+						}
+					}
+				}
+			}
+		},
+		"getAuthenticatedUser": {
+			"instanceof": "Function"
+		},
+		"getUserByCredentials": {
+			"instanceof": "Function"
+		}
+	}
+}

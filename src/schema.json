@@ -1,0 +1,75 @@
+{
+	"type": "object",
+	"additionalProperties": false,
+	"properties": {
+		"grantTypes": {
+			"type": "array",
+			"items": {
+				"description": "OAuth server garnt types object",
+				"minItems": 1
+			}
+		},
+		"token": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"path": {
+					"type": "string"
+				},
+				"lifetime": {
+					"additionalProperties": false,
+					"type": "object",
+					"properties": {
+						"access": {
+							"type": "number"
+						},
+						"refresh": {
+							"type": "number"
+						}
+					}
+				},
+				"extensible": {
+					"type": "boolean"
+				},
+				"refreshable": {
+					"type": "boolean"
+				},
+				"save": {
+					"instanceof": "Function"
+				},
+				"Id": {
+					"additionalProperties": false,
+					"type": "object",
+					"properties": {
+						"Access": {
+							"description": "",
+							"instanceof": "Function"
+						},
+						"Refresh": {
+							"description": "",
+							"instanceof": "Function"
+						}
+					}
+				}
+			}
+		},
+		"scope": {
+			"additionalProperties": false,
+			"type": "object",
+			"properties": {
+				"validate": {
+					"instanceof": "Function"
+				}
+			}
+		},
+		"client": {
+			"additionalProperties": false,
+			"type": "object",
+			"properties": {
+				"get": {
+					"instanceof": "Function"
+				}
+			}
+		}
+	}
+}
