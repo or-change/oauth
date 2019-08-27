@@ -164,10 +164,10 @@ function defaultOAuthOptionsFactory() {
 			},
 			extend(data) {
 				const customAttributes = {};
-				const modelAttributes = ['accessToken', 'refreshToken', 'scope', 'client', 'user'];
+				const RequestParameters = ['grant_type', 'client_id', 'client_secret', 'username', 'password', 'refresh_token', 'redirect_uri', 'code', 'scope'];
 
 				for (var key in data) {
-					if (data.hasOwnProperty(key) && (modelAttributes.indexOf(key) < 0)) {
+					if (data.hasOwnProperty(key) && (RequestParameters.indexOf(key) < 0)) {
 						customAttributes[key] = data[key];
 					}
 				}

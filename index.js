@@ -43,7 +43,9 @@ const OAuth = module.exports = function OAuthHandler(options) {
 
 				try {
 					const checked = utils.authorizationParser(payload);
-					const client = grantType.type === 'authorization_code' ? { id: checked.clientId } : finalOptions.client.get(checked.clientId, checked.clientSecret);
+					const client = grantType.type === 'authorization_code' ? {
+						id: checked.clientId
+					} : finalOptions.client.get(checked.clientId, checked.clientSecret);
 
 					if (!client) {
 						res.statusCode = 400;
@@ -74,7 +76,7 @@ const OAuth = module.exports = function OAuthHandler(options) {
 					if (finalOptions.token.extensible) {
 						const customAttributes = await finalOptions.token.extend(body);
 
-						Object.assign(data, { customAttributes });
+						data.customAttributes = customAttributes;
 					}
 
 					await finalOptions.token.save(data, grantType.type);
