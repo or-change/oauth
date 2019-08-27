@@ -49,7 +49,7 @@ const OAuth = module.exports = function OAuthHandler(options) {
 
 					if (!client) {
 						res.statusCode = 400;
-						res.end('Bad request');
+						res.end('Invalid client: client does not matched');
 					}
 
 					const scope = body.scope;
@@ -106,13 +106,18 @@ const OAuth = module.exports = function OAuthHandler(options) {
 		const matchedRouter = routers.find(router => router.test(req, finalOptions.prefix));
 
 		if (matchedRouter) {
-			await matchedRouter.handler(req, res, {
-				body: await getBody(),
-				getClient(id, secret, isAuthorize = false) {
-					return finalOptions.client.get(id, secret, isAuthorize);
-				},
-				prefix: finalOptions.prefix
-			});
+			try {
+				await matchedRouter.handler(req, res, {
+					body: await getBody(),
+					getClient(id, secret, isAuthorize = false) {
+						return finalOptions.client.get(id, secret, isAuthorize);
+					},
+					prefix: finalOptions.prefix
+				});
+			} catch (error) {
+				res.statusCode = 400;
+				res.end(error.message);
+			}
 		}
 	};
 };

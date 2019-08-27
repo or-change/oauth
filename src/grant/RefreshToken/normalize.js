@@ -86,5 +86,5 @@ function defaultRefreshTokenFactory() {
 
 			return true;
 		}
-	}
+	};
 }

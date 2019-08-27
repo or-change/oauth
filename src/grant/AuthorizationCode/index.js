@@ -49,9 +49,7 @@ module.exports = function AuthorizationCode(options) {
 
 			return token;
 		},
-		install({
-			router
-		}) {
+		install({ router }) {
 			router({
 				test(req, prefix) {
 					const url = new URL(req.url, 'http://example');
@@ -136,6 +134,14 @@ module.exports = function AuthorizationCode(options) {
 						throw new Error('Invalid client: `redirect_uri` does not match client value');
 					}
 
+					if (responseType !== 'code') {
+						throw new Error('Unsupported response type: `code` does not supported');
+					}
+
+					if (!finalOptions.scope.validate(finalOptions.scope.accept, scope, finalOptions.scope.valueValidate)) {
+						throw new Error('Invalid scope: `scope` does not matched');
+					}
+
 					if (req.method === 'GET') {
 						const approvePath = url.format({
 							pathname: path.join(oauth.prefix, finalOptions.path.approve),
@@ -174,7 +180,7 @@ module.exports = function AuthorizationCode(options) {
 						await finalOptions.code.store.save(code, user, client);
 
 						if (!finalOptions.allowEmptyState && !state) {
-							throw new Error('Missing parameter: `state`');
+							throw new Error('Invalid request: missing parameter `state`');
 						}
 
 						res.writeHead(302, {
