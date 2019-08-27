@@ -9,6 +9,9 @@
 				"minItems": 1
 			}
 		},
+		"prefix": {
+			"type": "string"
+		},
 		"token": {
 			"type": "object",
 			"additionalProperties": false,
@@ -50,14 +53,14 @@
 							"instanceof": "Function"
 						}
 					}
-				}
-			}
-		},
-		"scope": {
-			"additionalProperties": false,
-			"type": "object",
-			"properties": {
-				"validate": {
+				},
+				"extend": {
+					"instanceof": "Function"
+				},
+				"created": {
+					"instanceof": "Function"
+				},
+				"refreshed": {
 					"instanceof": "Function"
 				}
 			}
@@ -67,6 +70,24 @@
 			"type": "object",
 			"properties": {
 				"get": {
+					"instanceof": "Function"
+				}
+			}
+		},
+		"scope": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"default": {
+					"type": "string"
+				},
+				"accept": {
+					"type": "array"
+				},
+				"validate": {
+					"instanceof": "Function"
+				},
+				"valueValidate": {
 					"instanceof": "Function"
 				}
 			}

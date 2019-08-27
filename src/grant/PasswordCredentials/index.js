@@ -7,10 +7,21 @@ module.exports = function PasswordCredentials(options) {
 	return {
 		type: TYPE,
 		refreshable: true,
-		async queryUser({ getCredentials }) {
-			const credentials = getCredentials();
+		async tokenHandler({ body, data, client, tokenCreated }) {
+			if (!body.username || !body.password) {
+				throw new Error('Invalid request, missing parameter `username` or `password`');
+			}
 
-			return finalOptions.getUser(credentials.username, credentials.password);
+			if (!finalOptions.scope.validate(finalOptions.scope.accept, data.scope, finalOptions.scope.valueValidate)) {
+				throw new Error('Invalid grant: inavlid scope');
+			}
+
+			const user = finalOptions.getUser(body.username, body.password);
+			const token = tokenCreated(data);
+
+			await finalOptions.saveToken(data, user, client);
+
+			return token; 
 		}
 	};
 };

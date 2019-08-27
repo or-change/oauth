@@ -11,13 +11,13 @@
 <body>
 	<% if (user) { %>
 	<h2><%= user %></h2>
-	<form method="POST" action="<%= path %>">
+	<form method="POST" action="<%= authorizePath %>">
 		<input type="hidden" name="user" value="<%= user %>">
 		<input type="hidden" name="isAuthenticated" value="<%= true %>">
 		<input type="submit">
 	</form>
 	<% } else { %>
-		<form method="POST" action="<%= path %>">
+		<form method="POST" action="<%= authorizePath %>">
 			username: <input type="text" name="username">
 			password: <input type="password" name="password">
 			<input type="hidden" name="isAuthenticated" value="<%= true %>">

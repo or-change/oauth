@@ -7,7 +7,7 @@
 			"additionalProperties": false,
 			"properties": {
 				"accept": {
-					"type": "array"
+					"type": "array" 
 				},
 				"validate": {
 					"instanceof": "Function"

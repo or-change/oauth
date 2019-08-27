@@ -4,6 +4,24 @@
 	"properties": {
 		"getUser": {
 			"instanceof": "Function"
+		},
+		"scope": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"accept": {
+					"type": "array"
+				},
+				"validate": {
+					"instanceof": "Function"
+				},
+				"valueValidate": {
+					"instanceof": "Function"
+				}
+			}
+		},
+		"saveToken": {
+			"instanceof": "Function"
 		}
 	}
 }

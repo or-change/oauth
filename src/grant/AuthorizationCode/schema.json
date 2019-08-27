@@ -41,10 +41,39 @@
 				}
 			}
 		},
-		"getAuthenticatedUser": {
-			"instanceof": "Function"
+		"userAuthenticate": {
+			"type": "object",
+			"properties": {
+				"approvePagePath": {
+					"type": "string"
+				},
+				"getAuthenticatedUser": {
+					"instanceof": "Function"
+				},
+				"getUserByCredentials": {
+					"instanceof": "Function"
+				}
+			}
 		},
-		"getUserByCredentials": {
+		"scope": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"default": {
+					"type": "string"
+				},
+				"accept": {
+					"type": "array"
+				},
+				"validate": {
+					"instanceof": "Function"
+				},
+				"valueValidate": {
+					"instanceof": "Function"
+				}
+			}
+		},
+		"saveToken": {
 			"instanceof": "Function"
 		}
 	}

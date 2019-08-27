@@ -15,14 +15,11 @@ module.exports = function AuthorizationCode(options) {
 
 	return {
 		type: TYPE,
-		refershable: true,
-		async queryUser({
-			body,
-			client
-		}) {
+		refreshable: true,
+		async tokenHandler({ body, data, client, tokenCreated }) {
 			const code = finalOptions.code.store.get(body.code);
 
-			if (!code || code.client.id !== client.id || !code.redirectUri) {
+			if (!code || code.client.id !== client.id || !code.redirectUri) {// 异常处理400
 				throw new Error('Invalid grant: authorization code is invalid');
 			}
 
@@ -40,51 +37,66 @@ module.exports = function AuthorizationCode(options) {
 				throw new Error('Invalid grant');
 			}
 
-			return code.user;
+			const user = code.user;
+
+			if (!finalOptions.scope.validate(finalOptions.scope.accept, data.scope, finalOptions.scope.valueValidate)) {
+				throw new Error('Invalid grant: inavlid scope');
+			}
+			
+			const token = tokenCreated(data);
+
+			await finalOptions.saveToken(data, user, client);
+
+			return token;
 		},
 		install({
 			router
 		}) {
 			router({
-				test(req) {
+				test(req, prefix) {
 					const url = new URL(req.url, 'http://example');
-					if (url.pathname === finalOptions.path.approve && req.method === 'GET') {
+					const approvePath = path.join(prefix, finalOptions.path.approve).toString().replace(/\\/g, '/');
+
+					if (url.pathname === approvePath && req.method === 'GET') {
 						return true;
 					}
 
 					return false;
 				},
-				async handler(req, res) {
-					const user = finalOptions.getAuthenticatedUser(req);
+				async handler(req, res, oauth) {
+					const user = finalOptions.userAuthenticate.getAuthenticatedUser(req);
 					const query = new URL(req.url, 'http://example').searchParams;
 
-					fs.readFile(path.join(__dirname, 'approve.ejs'), 'utf-8', (err, data) => {
+					fs.readFile(finalOptions.userAuthenticate.approvePagePath, 'utf-8', (err, data) => {
 						if (err) {
 							return res.writeHead(500).end(JSON.stringify(err));
 						}
 
+						const authorizePath = url.format({
+							pathname: path.join(oauth.prefix, finalOptions.path.authorize).toString().replace(/\\/g, '/'),
+							query: {
+								client_id: query.get('client_id'),
+								client_secret: query.get('client_secret'),
+								response_type: query.get('response_type'),
+								redirect_uri: query.get('redirect_uri'),
+								scope: query.get('scope'),
+								state: query.get('state')
+							}
+						});
 						res.end(ejs.render(data, {
 							user,
-							path: url.format({
-								pathname: finalOptions.path.authorize,
-								query: {
-									client_id: query.get('client_id'),
-									client_secret: query.get('client_secret'),
-									response_type: query.get('response_type'),
-									redirect_uri: query.get('redirect_uri'),
-									scope: query.get('scope'),
-									state: query.get('state')
-								}
-							})
+							authorizePath
 						}));
 					});
 				}
 			});
 
 			router({
-				test(req) {
+				test(req, prefix) {
 					const url = new URL(req.url, 'http://example');
-					if (url.pathname === finalOptions.path.authorize) {
+					const authorizePath = path.join(prefix, finalOptions.path.authorize).toString().replace(/\\/g, '/');
+
+					if (url.pathname === authorizePath) {
 						return true;
 					}
 
@@ -95,7 +107,7 @@ module.exports = function AuthorizationCode(options) {
 					const clientId = query.get('client_id');
 					const clientSecret = query.get('client_secret');
 					const redirectUri = query.get('redirect_uri');
-					const scope = query.get('scope');
+					const scope = query.get('scope') || finalOptions.scope.default;
 					const responseType = query.get('response_type');
 					const state = query.get('state');
 
@@ -126,8 +138,8 @@ module.exports = function AuthorizationCode(options) {
 					}
 
 					if (req.method === 'GET') {
-						const approve = url.format({
-							pathname: finalOptions.path.approve,
+						const approvePath = url.format({
+							pathname: path.join(oauth.prefix, finalOptions.path.approve),
 							query: {
 								client_id: clientId,
 								client_secret: clientSecret,
@@ -139,13 +151,13 @@ module.exports = function AuthorizationCode(options) {
 						});
 
 						res.writeHead(302, {
-							Location: approve
+							Location: approvePath
 						});
 						res.end();
 					}
 
 					if (req.method === 'POST') {
-						const user = oauth.body.user || finalOptions.getUserByCredentials(oauth.body.username, oauth.body.password);
+						const user = oauth.body.user || finalOptions.userAuthenticate.getUserByCredentials(oauth.body.username, oauth.body.password);
 						
 						if (!user) {
 							res.statusCode = 401;
