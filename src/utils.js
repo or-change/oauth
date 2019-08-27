@@ -23,15 +23,17 @@ exports.authorizationParser = function auth({ body, query, headers }) {
 			return null;
 		}
 
-		const userInfo = USER_INFO_REG.exec(Buffer.from(match[1], 'base64').toString());
+		const clientInfo = USER_INFO_REG.exec(Buffer.from(match[1], 'base64').toString());
 
-		if (!userInfo[1] || !userInfo[2]) {
-			return null;
+		if (!clientInfo[2]) {
+			return {
+				clientId: clientInfo[1]
+			};
 		}
 
 		return {
-			clientId: userInfo[1],
-			clientSecret: userInfo[2]
+			clientId: clientInfo[1],
+			clientSecret: clientInfo[2]
 		};
 	}
 };

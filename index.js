@@ -43,7 +43,7 @@ const OAuth = module.exports = function OAuthHandler(options) {
 
 				try {
 					const checked = utils.authorizationParser(payload);
-					const client = finalOptions.client.get(checked.clientId, checked.clientSecret);
+					const client = grantType.type === 'authorization_code' ? { id: checked.clientId } : finalOptions.client.get(checked.clientId, checked.clientSecret);
 
 					if (!client) {
 						res.statusCode = 400;
@@ -84,7 +84,7 @@ const OAuth = module.exports = function OAuthHandler(options) {
 						data: Object.assign({}, data),
 						client,
 						tokenCreated: finalOptions.token.created,
-						tokenRefreshed: finalOptions.token.refershed
+						tokenRefreshed: finalOptions.token.refreshed
 					});
 
 					res.statusCode = 200;
@@ -106,8 +106,8 @@ const OAuth = module.exports = function OAuthHandler(options) {
 		if (matchedRouter) {
 			await matchedRouter.handler(req, res, {
 				body: await getBody(),
-				getClient(id, secret) {
-					return finalOptions.client.get(id, secret);
+				getClient(id, secret, isAuthorize = false) {
+					return finalOptions.client.get(id, secret, isAuthorize);
 				},
 				prefix: finalOptions.prefix
 			});

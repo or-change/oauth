@@ -20,6 +20,10 @@ module.exports = function RefreshToken(options) {
 
 			const token = tokenRefreshed(refreshTokenId, data);
 
+			if (!token) {
+				throw new Error('Invalid grant: invalid refresh token');
+			}
+
 			await finalOptions.saveToken(data, client);
 
 			return token;

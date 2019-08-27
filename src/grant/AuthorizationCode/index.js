@@ -19,7 +19,7 @@ module.exports = function AuthorizationCode(options) {
 		async tokenHandler({ body, data, client, tokenCreated }) {
 			const code = finalOptions.code.store.get(body.code);
 
-			if (!code || code.client.id !== client.id || !code.redirectUri) {// 异常处理400
+			if (!code || code.client.id !== client.id || !code.redirectUri) {
 				throw new Error('Invalid grant: authorization code is invalid');
 			}
 
@@ -67,27 +67,27 @@ module.exports = function AuthorizationCode(options) {
 					const user = finalOptions.userAuthenticate.getAuthenticatedUser(req);
 					const query = new URL(req.url, 'http://example').searchParams;
 
-					fs.readFile(finalOptions.userAuthenticate.approvePagePath, 'utf-8', (err, data) => {
+					const pageContent = await fs.readFileSync(finalOptions.userAuthenticate.approvePagePath, 'utf-8', (err, data) => {
 						if (err) {
 							return res.writeHead(500).end(JSON.stringify(err));
 						}
 
-						const authorizePath = url.format({
+						return data;
+					});
+
+					res.end(ejs.render(pageContent, {
+						user,
+						authorizePath: url.format({
 							pathname: path.join(oauth.prefix, finalOptions.path.authorize).toString().replace(/\\/g, '/'),
 							query: {
 								client_id: query.get('client_id'),
-								client_secret: query.get('client_secret'),
 								response_type: query.get('response_type'),
 								redirect_uri: query.get('redirect_uri'),
 								scope: query.get('scope'),
 								state: query.get('state')
 							}
-						});
-						res.end(ejs.render(data, {
-							user,
-							authorizePath
-						}));
-					});
+						})
+					}));
 				}
 			});
 
@@ -105,21 +105,20 @@ module.exports = function AuthorizationCode(options) {
 				async handler(req, res, oauth) {
 					const query = new URL(req.url, 'http://example').searchParams;
 					const clientId = query.get('client_id');
-					const clientSecret = query.get('client_secret');
 					const redirectUri = query.get('redirect_uri');
 					const scope = query.get('scope') || finalOptions.scope.default;
 					const responseType = query.get('response_type');
 					const state = query.get('state');
 
-					if (!clientId || !clientSecret) {
-						throw new Error('Missing parameter: `client_id` or `client_secret`');
+					if (!clientId) {
+						throw new Error('Missing parameter: `client_id`');
 					}
 
 					if (redirectUri && !urlReg.test(redirectUri)) {
 						throw new Error('Invalid request: `redirect_uri` is not a valid URI');
 					}
 
-					const client = await oauth.getClient(clientId, clientSecret);
+					const client = await oauth.getClient(clientId, null, true);
 
 					if (!client) {
 						throw new Error('Invalid client: client credentials are invalid');
@@ -142,7 +141,6 @@ module.exports = function AuthorizationCode(options) {
 							pathname: path.join(oauth.prefix, finalOptions.path.approve),
 							query: {
 								client_id: clientId,
-								client_secret: clientSecret,
 								response_type: responseType,
 								redirect_uri: redirectUri,
 								scope,

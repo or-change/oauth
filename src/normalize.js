@@ -41,7 +41,7 @@ module.exports = function OAuthOptionsNormalize(options = {}) {
 				Id: _Id = finalOptions.token.Id,
 				extend: _extend = finalOptions.token.extend,
 				created: _created = finalOptions.token.created,
-				refreshed: _refreshed = finalOptions.token.refershed
+				refreshed: _refreshed = finalOptions.token.refreshed
 			} = _token;
 
 			if (typeof _Id === 'object') {
@@ -70,7 +70,7 @@ module.exports = function OAuthOptionsNormalize(options = {}) {
 			finalOptions.token.save = _save;
 			finalOptions.token.extend = _extend;
 			finalOptions.token.created = _created;
-			finalOptions.token.refershed = _refreshed;
+			finalOptions.token.refreshed = _refreshed;
 		}
 
 		if (typeof _scope === 'object') {
@@ -205,7 +205,7 @@ function defaultOAuthOptionsFactory() {
 
 				return token;
 			},
-			refershed(id, data) {
+			refreshed(id, data) {
 				const originalRefreshToken = store.token.refresh[id];
 
 				if (originalRefreshToken && originalRefreshToken.expiredAt > Date.now()) {
@@ -237,10 +237,10 @@ function defaultOAuthOptionsFactory() {
 			}
 		},
 		client: {
-			get(id, secret) {
+			get(id, secret, isAuthorize = false) {
 				const client = store.client[id];
 
-				if (client.secret === secret) {
+				if (isAuthorize || client.secret === secret) {
 					return client;
 				}
 
