@@ -39,7 +39,6 @@ module.exports = function OAuthOptionsNormalize(options = {}) {
 				refreshable: _refreshable = finalOptions.token.refreshable,
 				save: _save = finalOptions.token.save,
 				Id: _Id = finalOptions.token.Id,
-				extend: _extend = finalOptions.token.extend,
 				created: _created = finalOptions.token.created,
 				refreshed: _refreshed = finalOptions.token.refreshed
 			} = _token;
@@ -68,7 +67,6 @@ module.exports = function OAuthOptionsNormalize(options = {}) {
 			finalOptions.token.extensible = _extensible;
 			finalOptions.token.refreshable = _refreshable;
 			finalOptions.token.save = _save;
-			finalOptions.token.extend = _extend;
 			finalOptions.token.created = _created;
 			finalOptions.token.refreshed = _refreshed;
 		}
@@ -161,18 +159,6 @@ function defaultOAuthOptionsFactory() {
 				}
 
 				return true;
-			},
-			extend(data) {
-				const customAttributes = {};
-				const RequestParameters = ['grant_type', 'client_id', 'client_secret', 'username', 'password', 'refresh_token', 'redirect_uri', 'code', 'scope'];
-
-				for (var key in data) {
-					if (data.hasOwnProperty(key) && (RequestParameters.indexOf(key) < 0)) {
-						customAttributes[key] = data[key];
-					}
-				}
-
-				return customAttributes;
 			},
 			Id: {
 				Access() {

@@ -21,11 +21,10 @@ module.exports = function PasswordCredentialsNormalize(options = {}) {
 		const {
 			getUser: _getUser = finalOptions.getUser,
 			scope: _scope = finalOptions.scope,
-			saveToken: _saveToken = finalOptions.saveToken
+			token: _token = finalOptions.token
 		} = options;
 
 		finalOptions.getUser = _getUser;
-		finalOptions.saveToken = _saveToken;
 
 		if (typeof _scope === 'object') {
 			const {
@@ -37,6 +36,25 @@ module.exports = function PasswordCredentialsNormalize(options = {}) {
 			finalOptions.scope.accept = _accpet;
 			finalOptions.scope.validate = _validate;
 			finalOptions.scope.valueValidate = _valueValidate;
+		}
+
+		if (typeof _token === 'object') {
+			const {
+				store: _store = finalOptions.token.store,
+				extensibleAttributes: _extensibleAttributes = finalOptions.token.extensibleAttributes,
+				extend: _extend = finalOptions.token.extend
+			} = _token;
+
+			finalOptions.token.extensibleAttributes = _extensibleAttributes;
+			finalOptions.token.extend = _extend;
+			
+			if (typeof _store === 'object') {
+				const {
+					save: _save = finalOptions.token.store.save
+				} = _store;
+
+				finalOptions.token.store.save = _save;
+			}
 		}
 	}
 
@@ -83,25 +101,46 @@ function defaultClientCredentialsFactory() {
 				return true;
 			}
 		},
-		saveToken(token, user, client) {
-			const accessToken = Object.assign(token.accessToken, {
-				user,
-				client,
-				scope: token.scope
-			});
-			const refreshToken = token.refreshToken ? Object.assign(token.refreshToken, {
-				user, 
-				client,
-				scope: token.scope
-			}) : null;
+		token: {
+			store: {
+				save(token, user, client) {
+					const accessToken = Object.assign(token.accessToken, {
+						user,
+						client,
+						scope: token.scope
+					});
+					const refreshToken = token.refreshToken ? Object.assign(token.refreshToken, {
+						user, 
+						client,
+						scope: token.scope
+					}) : null;
+		
+					store.token.access[accessToken.id] = accessToken;
+		
+					if (refreshToken) {
+						store.token.refresh[refreshToken.id] = refreshToken;
+					}
+		
+					return true;
+				}
+			},
+			extensibleAttributes: [],
+			extend(extensibleAttributes, body) {
+				const customAttributes = {};
+				const RequestParameters = ['grant_type', 'client_id', 'client_secret', 'username', 'password', 'refresh_token', 'redirect_uri', 'code', 'scope'];
 
-			store.token.access[accessToken.id] = accessToken;
+				if (extensibleAttributes.length === 0) {
+					return null;
+				}
+				
+				for (var key in body) {
+					if (body.hasOwnProperty(key) && (RequestParameters.indexOf(key) < 0) && extensibleAttributes.indexOf(key) > 0) {
+						customAttributes[key] = body[key];
+					}
+				}
 
-			if (refreshToken) {
-				store.token.refresh[refreshToken.id] = refreshToken;
+				return customAttributes;
 			}
-
-			return true;
 		}
 	};
 }

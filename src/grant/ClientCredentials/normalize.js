@@ -5,7 +5,7 @@ const schema = require('./schema.json');
 
 module.exports = function ClientCredentialsNormalize(options = {}) {
 	const validate = ajv.compile(schema);
-	const valid = validate(options); 
+	const valid = validate(options);
 
 	if (!valid) {
 		validate.errors.forEach(error => {
@@ -14,17 +14,15 @@ module.exports = function ClientCredentialsNormalize(options = {}) {
 
 		throw new Error(JSON.stringify(validate.errors));
 	}
-	
+
 	const finalOptions = defaultClientCredentialsFactory();
 
 	if (options) {
 		const {
 			scope: _scope = finalOptions.scope,
-			saveToken: _saveToken = finalOptions.saveToken
+			token: _token = finalOptions.token
 		} = options;
 
-		finalOptions.saveToken = _saveToken;
-		
 		if (typeof _scope === 'object') {
 			const {
 				accept: _accpet = finalOptions.scope.accept,
@@ -35,6 +33,25 @@ module.exports = function ClientCredentialsNormalize(options = {}) {
 			finalOptions.scope.accept = _accpet;
 			finalOptions.scope.validate = _validate;
 			finalOptions.scope.valueValidate = _valueValidate;
+		}
+
+		if (typeof _token === 'object') {
+			const {
+				store: _store = finalOptions.token.store,
+				extensibleAttributes: _extensibleAttributes = finalOptions.token.extensibleAttributes,
+				extend: _extend = finalOptions.token.extend
+			} = _token;
+
+			finalOptions.token.extensibleAttributes = _extensibleAttributes;
+			finalOptions.token.extend = _extend;
+
+			if (typeof _store === 'object') {
+				const {
+					save: _save = finalOptions.token.store.save
+				} = _store;
+
+				finalOptions.token.store.save = _save;
+			}
 		}
 	}
 
@@ -49,7 +66,7 @@ function defaultClientCredentialsFactory() {
 			accept: ['*'],
 			validate(accept, scope, valueValidate) {
 				const scopes = scope.split(/\s+/);
-				
+
 				if (accept.length < scopes.length) {
 					return false;
 				}
@@ -66,15 +83,36 @@ function defaultClientCredentialsFactory() {
 				return true;
 			}
 		},
-		saveToken(token, client) {
-			const accessToken = Object.assign(token.accessToken, {
-				client,
-				scope: token.scope
-			});
+		token: {
+			store: {
+				save(token, client) {
+					const accessToken = Object.assign(token.accessToken, {
+						client,
+						scope: token.scope
+					});
 
-			store[accessToken.id] = accessToken;
+					store[accessToken.id] = accessToken;
 
-			return true;
+					return true;
+				}
+			},
+			extensibleAttributes: [],
+			extend(extensibleAttributes, body) {
+				const customAttributes = {};
+				const RequestParameters = ['grant_type', 'client_id', 'client_secret', 'username', 'password', 'refresh_token', 'redirect_uri', 'code', 'scope'];
+
+				if (extensibleAttributes.length === 0) {
+					return null;
+				}
+				
+				for (var key in body) {
+					if (body.hasOwnProperty(key) && (RequestParameters.indexOf(key) < 0) && extensibleAttributes.indexOf(key) > 0) {
+						customAttributes[key] = body[key];
+					}
+				}
+
+				return customAttributes;
+			}
 		}
 	};
 }

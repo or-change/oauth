@@ -20,7 +20,7 @@ module.exports = function RefreshTokenNormalize(options = {}) {
 	if (options) {
 		const {
 			scope: _scope = finalOptions.scope,
-			saveToken: _saveToken = finalOptions.saveToken
+			token: _token = finalOptions.token
 		} = options;
 
 		if (typeof _scope == 'object') {
@@ -35,7 +35,24 @@ module.exports = function RefreshTokenNormalize(options = {}) {
 			finalOptions.scope.valueValidate = _valueValidate;
 		}
 
-		finalOptions.saveToken = _saveToken;
+		if (typeof _token === 'object') {
+			const {
+				store: _store = finalOptions.token.store,
+				extensibleAttributes: _extensibleAttributes = finalOptions.token.extensibleAttributes,
+				extend: _extend = finalOptions.token.extend
+			} = _token;
+
+			finalOptions.token.extensibleAttributes = _extensibleAttributes;
+			finalOptions.token.extend = _extend;
+			
+			if (typeof _store === 'object') {
+				const {
+					save: _save = finalOptions.token.store.save
+				} = _store;
+
+				finalOptions.token.store.save = _save;
+			}
+		}
 	}
 
 	return finalOptions;
@@ -71,20 +88,41 @@ function defaultRefreshTokenFactory() {
 				return true;
 			}
 		},
-		saveToken(token, client) {
-			const accessToken = Object.assign(token.accessToken, {
-				client,
-				scope: token.scope
-			});
-			const refreshToken = token.refreshToken ? Object.assign(token.refreshToken, {
-				client,
-				scope: token.scope
-			}) : null;
+		token: {
+			store: {
+				save(token, client) {
+					const accessToken = Object.assign(token.accessToken, {
+						client,
+						scope: token.scope
+					});
+					const refreshToken = token.refreshToken ? Object.assign(token.refreshToken, {
+						client,
+						scope: token.scope
+					}) : null;
+			
+					store.token.access[accessToken.id] = accessToken;
+					store.token.refresh[refreshToken.id] = refreshToken;
+			
+					return true;
+				}
+			},
+			extensibleAttributes: [],
+			extend(extensibleAttributes, body) {
+				const customAttributes = {};
+				const RequestParameters = ['grant_type', 'client_id', 'client_secret', 'username', 'password', 'refresh_token', 'redirect_uri', 'code', 'scope'];
 
-			store.token.access[accessToken.id] = accessToken;
-			store.token.refresh[refreshToken.id] = refreshToken;
+				if (extensibleAttributes.length === 0) {
+					return null;
+				}
 
-			return true;
+				for (var key in body) {
+					if (body.hasOwnProperty(key) && (RequestParameters.indexOf(key) < 0) && extensibleAttributes.indexOf(key) > 0) {
+						customAttributes[key] = body[key];
+					}
+				}
+
+				return customAttributes;
+			}
 		}
 	};
 }

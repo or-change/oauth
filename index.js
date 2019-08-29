@@ -1,5 +1,4 @@
 const normalize = require('./src/normalize');
-const path = require('path');
 const utils = require('./src/utils');
 
 const OAuth = module.exports = function OAuthHandler(options) {
@@ -17,107 +16,99 @@ const OAuth = module.exports = function OAuthHandler(options) {
 	});
 
 	return async function (req, res, injection = {}) {
+		const prefix = finalOptions.prefix;
 		const url = new URL(req.url, 'http://example');
-		const {
-			getBody = utils.getBody(req),
-		} = injection;
-		const tokenPath = path.join(finalOptions.prefix, finalOptions.token.path).toString().replace(/\\/g, '/');
+		const { getBody = utils.getBody(req) } = injection;
+		const tokenPath = prefix + finalOptions.token.path;
 
 		if (url.pathname === tokenPath && req.method === 'POST') {
-			if (req.headers['content-type'] === 'application/x-www-form-urlencoded') {
-				const body = await getBody();
-				const payload = {
-					body,
-					query: url.searchParams,
-					headers: req.headers
+			if ((req.headers['content-type'] !== 'application/x-www-form-urlencoded')) {
+				res.statusCode = 400;
+				res.end('Invalid request');
+			}
+
+			const body = await getBody();
+			const payload = {
+				body,
+				query: url.searchParams,
+				headers: req.headers
+			};
+
+			const grantType = finalOptions.grantTypes.find(grantType => {
+				return grantType.type === body.grant_type;
+			});
+
+			if (grantType === 'undefined') {
+				res.statusCode = 400;
+				res.end('Bad request');
+			}
+
+			try {
+				const parsedClient = utils.authorizationParser(payload);
+				const scope = body.scope || finalOptions.scope.default;
+				const data = {
+					accessToken: {
+						id: finalOptions.token.Id.Access(),
+						expiredAt: Date.now() + finalOptions.token.lifetime.access
+					}
 				};
 
-				const grantType = finalOptions.grantTypes.find(grantType => {
-					return grantType.type === body.grant_type;
-				});
-
-				if (grantType === 'undefined') {
-					res.statusCode = 400;
-					res.end('Bad request');
+				if (finalOptions.scope.validate(finalOptions.scope.accept, scope, finalOptions.scope.valueValidate)) {
+					data.scope = scope;
 				}
 
-				try {
-					const checked = utils.authorizationParser(payload);
-					const client = grantType.type === 'authorization_code' ? {
-						id: checked.clientId
-					} : finalOptions.client.get(checked.clientId, checked.clientSecret);
-
-					if (!client) {
-						res.statusCode = 400;
-						res.end('Invalid client: client does not matched');
-					}
-
-					const scope = body.scope;
-					const data = {
-						accessToken: {
-							id: finalOptions.token.Id.Access(),
-							expiredAt: Date.now() + finalOptions.token.lifetime.access
-						}
+				if (grantType.refreshable && finalOptions.token.refreshable) {
+					data.refreshToken = {
+						id: finalOptions.token.Id.Refresh(),
+						expiredAt: Date.now() + finalOptions.token.lifetime.refresh
 					};
-
-					if (!scope) {
-						data.scope = finalOptions.scope.default;
-					} else if (finalOptions.scope.validate(finalOptions.scope.accept, scope, finalOptions.scope.valueValidate)) {
-						data.scope = body.scope;
-					}
-
-					if (grantType.refreshable && finalOptions.token.refreshable) {
-						data.refreshToken = {
-							id: finalOptions.token.Id.Refresh(),
-							expiredAt: Date.now() + finalOptions.token.lifetime.refresh
-						};
-					}
-
-					if (finalOptions.token.extensible) {
-						const customAttributes = await finalOptions.token.extend(body);
-
-						data.customAttributes = customAttributes;
-					}
-
-					await finalOptions.token.save(data, grantType.type);
-
-					const token = await grantType.tokenHandler({
-						body,
-						data: Object.assign({}, data),
-						client,
-						tokenCreated: finalOptions.token.created,
-						tokenRefreshed: finalOptions.token.refreshed
-					});
-
-					res.statusCode = 200;
-					res.setHeader['Cache-Control'] = 'no-store';
-					res.setHeader['Pragma'] = 'no-cache';
-					res.end(JSON.stringify(token));
-				} catch (error) {
-					res.statusCode = 500;
-					res.end(JSON.stringify(error.message));
 				}
-			} else {
-				res.statusCode = 400;
-				res.end('Bad request.');
-			}
-		}
 
-		const matchedRouter = routers.find(router => router.test(req, finalOptions.prefix));
-
-		if (matchedRouter) {
-			try {
-				await matchedRouter.handler(req, res, {
-					body: await getBody(),
+				const token = await grantType.createToken(res, {
+					body,
+					parsedClient,
+					data: Object.assign({}, data),
 					getClient(id, secret, isAuthorize = false) {
 						return finalOptions.client.get(id, secret, isAuthorize);
 					},
-					prefix: finalOptions.prefix
+					extensible: finalOptions.token.extensible,
+					tokenCreated: finalOptions.token.created,
+					tokenRefreshed: finalOptions.token.refreshed
 				});
+
+				if (finalOptions.token.extensible) {
+					Object.keys(token).forEach(key => {
+						if (!data[key]) {
+							data[key] = token[key];
+						}
+					});
+				}
+
+				await finalOptions.token.save(data, grantType.type);
+
+				res.statusCode = 200;
+				res.setHeader['Cache-Control'] = 'no-store';
+				res.setHeader['Pragma'] = 'no-cache';
+				res.end(JSON.stringify(token));
 			} catch (error) {
 				res.statusCode = 400;
-				res.end(error.message);
+				res.end(JSON.stringify(error.message));
 			}
+		}
+
+		const matchedRouter = routers.find(router => {
+			const routerPath = prefix + router.path;
+
+			return url.pathname === routerPath;
+		});
+
+		if (matchedRouter) {
+			await matchedRouter.handler(req, res, {
+				body: await getBody(),
+				getClient(id, secret, isAuthorize = false) {
+					return finalOptions.client.get(id, secret, isAuthorize);
+				}
+			});
 		}
 	};
 };

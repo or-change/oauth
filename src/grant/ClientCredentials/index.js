@@ -7,14 +7,27 @@ module.exports = function ClientCredentials(options = {}) {
 	return {
 		type: TYPE,
 		refreshable: false,
-		async tokenHandler({ data, client, tokenCreated }) {
+		async createToken(res, { body, data, parsedClient, getClient, extensible, tokenCreated }) {
+			const client = getClient(parsedClient.clientId, parsedClient.clientSecret);
+
+			if (!client) {
+				res.statusCode = 400;
+				res.end('Invalid client: client does not matched');
+			}
+			
 			if (!finalOptions.scope.validate(finalOptions.scope.accept, data.scope, finalOptions.scope.valueValidate)) {
-				throw new Error('Invalid grant: inavlid scope');
+				res.statusCode = 400;
+				res.end('Invalid grant: inavlid scope');
+			}
+
+			if (extensible) {
+				const customAttributes = await finalOptions.token.extend(body);
+				data.customAttributes = customAttributes;
 			}
 
 			const token = tokenCreated(data);
 
-			await finalOptions.saveToken(data, client);
+			await finalOptions.token.store.save(data, client);
 
 			return token;
 		}

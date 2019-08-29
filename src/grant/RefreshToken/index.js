@@ -7,24 +7,38 @@ module.exports = function RefreshToken(options) {
 	return {
 		type: TYPE,
 		refreshable: true,
-		async tokenHandler({ body, data, client, tokenRefreshed }) {
+		async createToken(res, { body, data, parsedClient , getClient, extensible, tokenRefreshed }) {
+			const client = getClient(parsedClient.clientId, parsedClient.clientSecret);
 			const refreshTokenId = body.refresh_token;
 			
+			if (!client) {
+				res.statusCode = 400;
+				res.end('Invalid client: client does not matched');
+			}
+			
 			if (!refreshTokenId) {
-				throw new Error('Invalid request: missing parameter `refresh_token`');
+				res.statusCode = 400;
+				res.end('Invalid request: missing parameter `refresh_token`');
 			}
 
 			if (!finalOptions.scope.validate(finalOptions.scope.accept, data.scope, finalOptions.scope.valueValidate)) {
-				throw new Error('Invalid grant: inavlid scope');
+				res.statusCode = 400;
+				res.end('Invalid grant: inavlid scope');
+			}
+
+			if (extensible) {
+				const customAttributes = await finalOptions.token.extend(body);
+				data.customAttributes = customAttributes;
 			}
 
 			const token = tokenRefreshed(refreshTokenId, data);
 
 			if (!token) {
-				throw new Error('Invalid grant: invalid refresh token');
+				res.statusCode = 400;
+				res.end('Invalid grant: invalid refresh token');
 			}
 
-			await finalOptions.saveToken(data, client);
+			await finalOptions.token.store.save(data, client);
 
 			return token;
 		}

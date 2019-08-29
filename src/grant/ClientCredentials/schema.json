@@ -17,8 +17,26 @@
 				}
 			}
 		},
-		"saveToken": {
-			"instanceof": "Function"
+		"token": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"store": {
+					"type": "object",
+					"addtionalProperties": false,
+					"properties": {
+						"save": {
+							"instanceof": "Function"
+						}
+					}
+				},
+				"extensibleAttributes": {
+					"type": "array"
+				},
+				"extend": {
+					"instanceof": "Function"
+				}
+			}
 		}
 	}
 }

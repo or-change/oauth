@@ -1,5 +1,4 @@
 const ejs = require('ejs');
-const path = require('path');
 const url = require('url');
 const fs = require('fs');
 const TYPE = 'authorization_code';
@@ -16,90 +15,91 @@ module.exports = function AuthorizationCode(options) {
 	return {
 		type: TYPE,
 		refreshable: true,
-		async tokenHandler({ body, data, client, tokenCreated }) {
+		async createToken(res, { body, data, parsedClinet, getClient, extensible, tokenCreated }) {
 			const code = finalOptions.code.store.get(body.code);
+			const client = getClient(parsedClinet.clientId, null, true);
 
+			if (!client) {
+				res.statusCode = 400;
+				res.end('Invalid client: client does not matched');
+			}
+			
 			if (!code || code.client.id !== client.id || !code.redirectUri) {
-				throw new Error('Invalid grant: authorization code is invalid');
+				res.statusCode = 400;
+				res.end('Invalid grant: authorization code is invalid');
 			}
 
 			if (code.expiredAt < new Date()) {
-				throw new Error('Invalid grant: authorization code has expired');
+				res.statusCode = 400;
+				res.end('Invalid grant: authorization code has expired');
 			}
 
 			const redirectUri = body.redirect_uri;
 
 			if (!urlReg.test(redirectUri) || redirectUri !== code.redirectUri) {
-				throw new Error('Invalid request: `redirect_uri` is invalid');
+				res.statusCode = 400;
+				res.end('Invalid request: `redirect_uri` is invalid');
 			}
 
 			if (!finalOptions.code.store.revoke(code.id)) {
-				throw new Error('Invalid grant');
+				res.statusCode = 400;
+				res.end('Invalid grant');
 			}
 
+			if (!finalOptions.scope.validate(finalOptions.scope.accept, data.scope, finalOptions.scope.valueValidate)) {
+				res.statusCode = 400;
+				res.end('Invalid grant: inavlid scope');
+			}
+			
 			const user = code.user;
 
-			if (!finalOptions.scope.validate(finalOptions.scope.accept, data.scope, finalOptions.scope.valueValidate)) {
-				throw new Error('Invalid grant: inavlid scope');
+			if (!user) {
+				res.statusCode = 400;
+				res.end('Invalid grant: user does not matched');
+			}
+
+			if (extensible) {
+				const customAttributes = await finalOptions.token.extend(body);
+				data.customAttributes = customAttributes;
 			}
 			
 			const token = tokenCreated(data);
 
-			await finalOptions.saveToken(data, user, client);
+			await finalOptions.token.store.save(data, user, client);
 
 			return token;
 		},
 		install({ router }) {
 			router({
-				test(req, prefix) {
-					const url = new URL(req.url, 'http://example');
-					const approvePath = path.join(prefix, finalOptions.path.approve).toString().replace(/\\/g, '/');
-
-					if (url.pathname === approvePath && req.method === 'GET') {
-						return true;
-					}
-
-					return false;
-				},
+				path: finalOptions.path.approve,
 				async handler(req, res, oauth) {
 					const user = finalOptions.userAuthenticate.getAuthenticatedUser(req);
 					const query = new URL(req.url, 'http://example').searchParams;
 
-					const pageContent = await fs.readFileSync(finalOptions.userAuthenticate.approvePagePath, 'utf-8', (err, data) => {
+					fs.readFile(finalOptions.userAuthenticate.approvePagePath, 'utf-8', (err, data) => {
 						if (err) {
 							return res.writeHead(500).end(JSON.stringify(err));
 						}
 
-						return data;
+						res.end(ejs.render(data, {
+							user,
+							authorizePath: url.format({
+								pathname: oauth.prefix + finalOptions.path.authorize,
+								query: {
+									client_id: query.get('client_id'),
+									response_type: query.get('response_type'),
+									redirect_uri: query.get('redirect_uri'),
+									scope: query.get('scope'),
+									state: query.get('state')
+								}
+							})
+						}));
 					});
-
-					res.end(ejs.render(pageContent, {
-						user,
-						authorizePath: url.format({
-							pathname: path.join(oauth.prefix, finalOptions.path.authorize).toString().replace(/\\/g, '/'),
-							query: {
-								client_id: query.get('client_id'),
-								response_type: query.get('response_type'),
-								redirect_uri: query.get('redirect_uri'),
-								scope: query.get('scope'),
-								state: query.get('state')
-							}
-						})
-					}));
 				}
 			});
 
 			router({
-				test(req, prefix) {
-					const url = new URL(req.url, 'http://example');
-					const authorizePath = path.join(prefix, finalOptions.path.authorize).toString().replace(/\\/g, '/');
-
-					if (url.pathname === authorizePath) {
-						return true;
-					}
-
-					return false;
-				},
+				path: finalOptions.path.authorize,
 				async handler(req, res, oauth) {
 					const query = new URL(req.url, 'http://example').searchParams;
 					const clientId = query.get('client_id');
@@ -109,42 +109,50 @@ module.exports = function AuthorizationCode(options) {
 					const state = query.get('state');
 
 					if (!clientId) {
-						throw new Error('Missing parameter: `client_id`');
-					}
-
-					if (redirectUri && !urlReg.test(redirectUri)) {
-						throw new Error('Invalid request: `redirect_uri` is not a valid URI');
+						res.statusCode = 400;
+						res.end('Invalid request: missing parameter: `client_id`');
 					}
 
 					const client = await oauth.getClient(clientId, null, true);
 
 					if (!client) {
-						throw new Error('Invalid client: client credentials are invalid');
-					}
-
-					if (!client.grants || client.grants.indexOf('authorization_code') < 0) {
-						throw new Error('Invalid client: `grant_type` is invalid');
+						res.statusCode = 400;
+						res.end('Invalid client: client credentials are invalid');
 					}
 
 					if (!client.redirectUris || 0 === client.redirectUris.length) {
-						throw new Error('Invalid client: missing client `redirectUri`');
+						res.statusCode = 400;
+						res.end('Invalid client: missing parameter `redirectUri`');
+					}
+
+					if (redirectUri && !urlReg.test(redirectUri)) {
+						res.statusCode = 400;
+						res.end('Invalid request: `redirect_uri` is not a valid URI');
+					}
+
+					if (!client.grants || client.grants.indexOf('authorization_code') < 0) {
+						res.statusCode = 400;
+						res.end('Invalid client: `grant_type` is invalid');
 					}
 
 					if (redirectUri && client.redirectUris.indexOf(redirectUri) < 0) {
-						throw new Error('Invalid client: `redirect_uri` does not match client value');
-					}
-
-					if (responseType !== 'code') {
-						throw new Error('Unsupported response type: `code` does not supported');
+						res.statusCode = 400;
+						res.end('Invalid client: `redirect_uri` does not match client value');
 					}
 
 					if (!finalOptions.scope.validate(finalOptions.scope.accept, scope, finalOptions.scope.valueValidate)) {
-						throw new Error('Invalid scope: `scope` does not matched');
+						res.statusCode = 400;
+						res.end('Invalid scope: `scope` does not matched');
+					}
+
+					if (responseType !== 'code') {
+						res.statusCode = 400;
+						res.end('Unsupported response type: `code` does not supported');
 					}
 
 					if (req.method === 'GET') {
 						const approvePath = url.format({
-							pathname: path.join(oauth.prefix, finalOptions.path.approve),
+							pathname: oauth.prefix + finalOptions.path.approve,
 							query: {
 								client_id: clientId,
 								response_type: responseType,
