@@ -72,9 +72,11 @@ module.exports = function AuthorizationCode(options) {
 		install({ router }) {
 			router({
 				path: finalOptions.path.approve,
-				async handler(req, res, oauth) {
+				async handler(req, res) {
+					const path = new URL(req.url, 'http://example')
 					const user = finalOptions.userAuthenticate.getAuthenticatedUser(req);
-					const query = new URL(req.url, 'http://example').searchParams;
+					const prefix = path.pathname.substring(0, path.pathname.lastIndexOf('/'));
+					const query = path.searchParams;
 
 					fs.readFile(finalOptions.userAuthenticate.approvePagePath, 'utf-8', (err, data) => {
 						if (err) {
@@ -84,7 +86,7 @@ module.exports = function AuthorizationCode(options) {
 						res.end(ejs.render(data, {
 							user,
 							authorizePath: url.format({
-								pathname: oauth.prefix + finalOptions.path.authorize,
+								pathname: prefix + finalOptions.path.authorize,
 								query: {
 									client_id: query.get('client_id'),
 									response_type: query.get('response_type'),
@@ -101,7 +103,8 @@ module.exports = function AuthorizationCode(options) {
 			router({
 				path: finalOptions.path.authorize,
 				async handler(req, res, oauth) {
-					const query = new URL(req.url, 'http://example').searchParams;
+					const path = new URL(req.url, 'http://example')
+					const query = path.searchParams;
 					const clientId = query.get('client_id');
 					const redirectUri = query.get('redirect_uri');
 					const scope = query.get('scope') || finalOptions.scope.default;
@@ -151,8 +154,9 @@ module.exports = function AuthorizationCode(options) {
 					}
 
 					if (req.method === 'GET') {
+						const prefix = path.pathname.substring(0, path.pathname.lastIndexOf('/'));
 						const approvePath = url.format({
-							pathname: oauth.prefix + finalOptions.path.approve,
+							pathname: prefix + finalOptions.path.approve,
 							query: {
 								client_id: clientId,
 								response_type: responseType,
