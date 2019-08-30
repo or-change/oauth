@@ -8,7 +8,6 @@ const TOKEN_FIELD_KEYWORD = [
 	'access_token',
 	'refresh_token',
 	'scope',
-	'state',
 	'token_type',
 	'expires_in',
 ];
@@ -50,7 +49,7 @@ const OAuth = module.exports = function OAuthHandler(options) {
 				id: finalOptions.token.Id.Access(),
 				expiredAt: Date.now() + finalOptions.token.lifetime.access
 			}),
-			scope: finalOptions.scope.set(finalOptions.scope.accept,requestBody.scope, finalOptions.scope.valueValidate),
+			scope: finalOptions.scope.set(finalOptions.scope.accept, requestBody.scope, finalOptions.scope.valueValidate),
 			extension: {}
 		};
 
