@@ -7,40 +7,45 @@ module.exports = function RefreshToken(options) {
 	return {
 		type: TYPE,
 		refreshable: true,
-		async createToken(res, { body, data, parsedClient , getClient, extensible, tokenRefreshed }) {
-			const client = getClient(parsedClient.clientId, parsedClient.clientSecret);
-			const refreshTokenId = body.refresh_token;
+		async createToken({ res, body, clientQuery, token }) {
+			const client = await token.queryClient(clientQuery.id, clientQuery.secret);
+			const refreshToken = body.refresh_token;
 			
 			if (!client) {
 				res.statusCode = 400;
 				res.end('Invalid client: client does not matched');
 			}
 			
-			if (!refreshTokenId) {
+			if (!refreshToken) {
 				res.statusCode = 400;
 				res.end('Invalid request: missing parameter `refresh_token`');
 			}
 
-			if (!finalOptions.scope.validate(finalOptions.scope.accept, data.scope, finalOptions.scope.valueValidate)) {
+			if (!finalOptions.scope.validate(finalOptions.scope.accept, token.scope, finalOptions.scope.valueValidate)) {
 				res.statusCode = 400;
 				res.end('Invalid grant: inavlid scope');
 			}
 
-			if (extensible) {
-				const customAttributes = await finalOptions.token.extend(body);
-				data.customAttributes = customAttributes;
+			const extension = finalOptions.token.set(finalOptions.token.extensibleAttributes, body);
+
+			if (extension) {
+				token.extends(extension);
 			}
 
-			const token = tokenRefreshed(refreshTokenId, data);
+			const isRefreshed = await token.refreshed(refreshToken);
 
-			if (!token) {
+			if (!isRefreshed) {
 				res.statusCode = 400;
-				res.end('Invalid grant: invalid refresh token');
-			}
+				res.end('Invalid grant: refresh token validate failed.');
+			} 
+			
+			await finalOptions.token.store.save({
+				accessToken: token.accessToken,
+				refreshToken: token.refreshToken,
+				scope: token.scope,
+				extension
+			}, client);
 
-			await finalOptions.token.store.save(data, client);
-
-			return token;
 		}
 	};
 };

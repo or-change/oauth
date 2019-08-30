@@ -42,11 +42,11 @@ module.exports = function PasswordCredentialsNormalize(options = {}) {
 			const {
 				store: _store = finalOptions.token.store,
 				extensibleAttributes: _extensibleAttributes = finalOptions.token.extensibleAttributes,
-				extend: _extend = finalOptions.token.extend
+				set: _set = finalOptions.token.set
 			} = _token;
 
 			finalOptions.token.extensibleAttributes = _extensibleAttributes;
-			finalOptions.token.extend = _extend;
+			finalOptions.token.set = _set;
 			
 			if (typeof _store === 'object') {
 				const {
@@ -104,12 +104,12 @@ function defaultClientCredentialsFactory() {
 		token: {
 			store: {
 				save(token, user, client) {
-					const accessToken = Object.assign(token.accessToken, {
+					const accessToken = Object.assign({}, token.accessToken, {
 						user,
 						client,
 						scope: token.scope
 					});
-					const refreshToken = token.refreshToken ? Object.assign(token.refreshToken, {
+					const refreshToken = token.refreshToken ? Object.assign({}, token.refreshToken, {
 						user, 
 						client,
 						scope: token.scope
@@ -125,7 +125,7 @@ function defaultClientCredentialsFactory() {
 				}
 			},
 			extensibleAttributes: [],
-			extend(extensibleAttributes, body) {
+			set(extensibleAttributes, body) {
 				const customAttributes = {};
 				const RequestParameters = ['grant_type', 'client_id', 'client_secret', 'username', 'password', 'refresh_token', 'redirect_uri', 'code', 'scope'];
 
@@ -134,7 +134,7 @@ function defaultClientCredentialsFactory() {
 				}
 				
 				for (var key in body) {
-					if (body.hasOwnProperty(key) && (RequestParameters.indexOf(key) < 0) && extensibleAttributes.indexOf(key) > 0) {
+					if (body.hasOwnProperty(key) && (RequestParameters.indexOf(key) === -1) && extensibleAttributes.indexOf(key) !== -1) {
 						customAttributes[key] = body[key];
 					}
 				}

@@ -26,12 +26,12 @@ module.exports = function RefreshTokenNormalize(options = {}) {
 		if (typeof _scope == 'object') {
 			const {
 				accept: _accept = finalOptions.scope.accept,
-				validate: _validate = finalOptions.scope.validate,
+				set: _set = finalOptions.scope.set,
 				valueValidate: _valueValidate = finalOptions.scope.valueValidate
 			} = _scope;
 
 			finalOptions.scope.accept = _accept;
-			finalOptions.scope.validate = _validate;
+			finalOptions.scope.set = _set;
 			finalOptions.scope.valueValidate = _valueValidate;
 		}
 
@@ -91,11 +91,11 @@ function defaultRefreshTokenFactory() {
 		token: {
 			store: {
 				save(token, client) {
-					const accessToken = Object.assign(token.accessToken, {
+					const accessToken = Object.assign({}, token.accessToken, {
 						client,
 						scope: token.scope
 					});
-					const refreshToken = token.refreshToken ? Object.assign(token.refreshToken, {
+					const refreshToken = token.refreshToken ? Object.assign({}, token.refreshToken, {
 						client,
 						scope: token.scope
 					}) : null;
@@ -107,7 +107,7 @@ function defaultRefreshTokenFactory() {
 				}
 			},
 			extensibleAttributes: [],
-			extend(extensibleAttributes, body) {
+			set(extensibleAttributes, body) {
 				const customAttributes = {};
 				const RequestParameters = ['grant_type', 'client_id', 'client_secret', 'username', 'password', 'refresh_token', 'redirect_uri', 'code', 'scope'];
 
@@ -116,7 +116,7 @@ function defaultRefreshTokenFactory() {
 				}
 
 				for (var key in body) {
-					if (body.hasOwnProperty(key) && (RequestParameters.indexOf(key) < 0) && extensibleAttributes.indexOf(key) > 0) {
+					if (body.hasOwnProperty(key) && (RequestParameters.indexOf(key) === -1) && extensibleAttributes.indexOf(key) !== -1) {
 						customAttributes[key] = body[key];
 					}
 				}

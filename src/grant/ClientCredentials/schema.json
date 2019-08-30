@@ -33,7 +33,7 @@
 				"extensibleAttributes": {
 					"type": "array"
 				},
-				"extend": {
+				"set": {
 					"instanceof": "Function"
 				}
 			}

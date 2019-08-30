@@ -39,7 +39,6 @@ module.exports = function OAuthOptionsNormalize(options = {}) {
 				refreshable: _refreshable = finalOptions.token.refreshable,
 				save: _save = finalOptions.token.save,
 				Id: _Id = finalOptions.token.Id,
-				created: _created = finalOptions.token.created,
 				refreshed: _refreshed = finalOptions.token.refreshed
 			} = _token;
 
@@ -67,7 +66,6 @@ module.exports = function OAuthOptionsNormalize(options = {}) {
 			finalOptions.token.extensible = _extensible;
 			finalOptions.token.refreshable = _refreshable;
 			finalOptions.token.save = _save;
-			finalOptions.token.created = _created;
 			finalOptions.token.refreshed = _refreshed;
 		}
 
@@ -75,13 +73,13 @@ module.exports = function OAuthOptionsNormalize(options = {}) {
 			const {
 				default: _default = finalOptions.scope.default,
 				accept: _accpet = finalOptions.scope.accept,
-				validate: _validate = finalOptions.scope.validate,
-				valueValidate: _valueValidate = finalOptions.scope.valueValidate
+				set: _set = finalOptions.scope.set,
+				valueset: _valueValidate = finalOptions.scope.valueValidate
 			} = _scope;
 
 			finalOptions.scope.scope = _default;
 			finalOptions.scope.accept = _accpet;
-			finalOptions.scope.validate = _validate;
+			finalOptions.scope.validate = _set;
 			finalOptions.scope.valueValidate = _valueValidate;
 		}
 
@@ -130,9 +128,7 @@ function defaultOAuthOptionsFactory() {
 	}
 
 	return {
-		grantTypes: [
-			AuthorizationCode()
-		],
+		grantTypes: [AuthorizationCode()],
 		prefix: '/oauth',
 		token: {
 			path: '/token',
@@ -143,19 +139,18 @@ function defaultOAuthOptionsFactory() {
 			extensible: false,
 			refreshable: true,
 			save(token, grant) {
-				const accessToken = Object.assign(token.accessToken, {
+				const accessToken = Object.assign({}, token.accessToken, {
 					grant,
 					scope: token.scope
 				});
-				const refreshToken = token.refreshToken ? Object.assign(token.refreshToken, {
-					grant,
+				const refreshToken = token.refreshToken ? Object.assign({}, token.refreshToken, {
 					scope: token.scope
 				}) : null;
 
-				store.token.access[accessToken.id] = accessToken;
+				store.token.access[token.accessToken.id] = accessToken;
 
 				if (refreshToken) {
-					store.token.refresh[refreshToken.id] = refreshToken;
+					store.token.refresh[token.refreshToken.id] = refreshToken;
 				}
 
 				return true;
@@ -168,58 +163,14 @@ function defaultOAuthOptionsFactory() {
 					return randomId();
 				}
 			},
-			created(data) {
-				const token = {
-					access_token: data.accessToken.id,
-					token_type: 'Bearer',
-					expires_in: data.accessToken.expiredAt
-				};
-
-				if (data.refreshToken) {
-					token.refresh_token = data.refreshToken.id;
-				}
-
-				if (data.scope) {
-					token.scope = data.scope;
-				}
-
-				for (var key in data.customAttributes) {
-					if (data.customAttributes.hasOwnProperty(key)) {
-						token[key] = data.customAttributes[key];
-					}
-				}
-
-				return token;
-			},
-			refreshed(id, data) {
+			refreshed(id) {
 				const originalRefreshToken = store.token.refresh[id];
 
 				if (originalRefreshToken && originalRefreshToken.expiredAt > Date.now()) {
-					delete store.token.refresh[id];
-					const token = {
-						access_token: data.accessToken.id,
-						token_type: 'Bearer',
-						expires_in: data.accessToken.expiredAt
-					};
-
-					if (data.refreshToken) {
-						token.refresh_token = data.refreshToken.id;
-					}
-
-					if (data.scope) {
-						token.scope = data.scope;
-					}
-
-					for (var key in data.customAttributes) {
-						if (data.customAttributes.hasOwnProperty(key)) {
-							token[key] = data.customAttributes[key];
-						}
-					}
-
-					return token;
+					return delete store.token.refresh[id];
 				}
 
-				return null;
+				return false;
 			}
 		},
 		client: {
@@ -236,7 +187,11 @@ function defaultOAuthOptionsFactory() {
 		scope: {
 			default: '*',
 			accept: ['*'],
-			validate(accept, scope, valueValidate) {
+			set(accept, scope, valueValidate) {
+				if (!scope) {
+					return '*';
+				}
+				
 				const scopes = scope.split(/\s+/);
 
 				if (accept.length < scopes.length) {
@@ -249,7 +204,11 @@ function defaultOAuthOptionsFactory() {
 					}
 				}
 
-				return valueValidate(scopes);
+				if(valueValidate(scopes)) {
+					return scope;
+				}
+
+				return null;
 			},
 			valueValidate(scopes) {
 				return true;

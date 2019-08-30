@@ -7,8 +7,8 @@ module.exports = function PasswordCredentials(options) {
 	return {
 		type: TYPE,
 		refreshable: true,
-		async createToken(res, { body, data, parsedClient , getClient, extensible, tokenCreated }) {
-			const client = getClient(parsedClient.clientId, parsedClient.clientSecret);
+		async createToken({ res, body, clientQuery, token }) {
+			const client = await token.queryClient(clientQuery.id, clientQuery.secret);
 
 			if (!client) {
 				res.statusCode = 400;
@@ -20,14 +20,9 @@ module.exports = function PasswordCredentials(options) {
 				res.end('Invalid request, missing parameter `username` or `password`');
 			}
 
-			if (!finalOptions.scope.validate(finalOptions.scope.accept, data.scope, finalOptions.scope.valueValidate)) {
+			if (!finalOptions.scope.validate(finalOptions.scope.accept, token.scope, finalOptions.scope.valueValidate)) {
 				res.statusCode = 400;
 				res.end('Invalid grant: inavlid scope');
-			}
-
-			if (extensible) {
-				const customAttributes = await finalOptions.token.extend(body);
-				data.customAttributes = customAttributes;
 			}
 
 			const user = finalOptions.getUser(body.username, body.password);
@@ -37,11 +32,18 @@ module.exports = function PasswordCredentials(options) {
 				res.end('Invalid grant: user does not matched');
 			}
 			
-			const token = tokenCreated(data);
+			const extension = finalOptions.token.set(finalOptions.token.extensibleAttributes, body);
 
-			await finalOptions.token.store.save(data, user, client);
+			if (extension) {
+				token.extends(extension);
+			}
 
-			return token; 
+			await finalOptions.token.store.save({
+				accessToken: token.accessToken,
+				refreshToken: token.refreshToken,
+				scope: token.scope,
+				extension
+			}, user, client);
 		}
 	};
 };

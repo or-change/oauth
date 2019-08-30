@@ -54,9 +54,6 @@
 						}
 					}
 				},
-				"created": {
-					"instanceof": "Function"
-				},
 				"refreshed": {
 					"instanceof": "Function"
 				}

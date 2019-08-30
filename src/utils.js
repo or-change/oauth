@@ -1,8 +1,8 @@
 const BASIC_REG = /^ *(?:[Bb][Aa][Ss][Ii][Cc]) +([A-Za-z0-9._~+/-]+=*) *$/;
 const USER_INFO_REG = /^([^:]*):(.*)$/;
 
-exports.authorizationParser = function auth({ body, query, headers }) {
-	const clientId = body.client_id || query.get('client_id');
+exports.ClientQuery = function ({ body, query, headers }) {
+	const clientId = body.client_id || query['client_id'];
 
 	if (clientId === 'undefined' && headers.authorization === 'undefined') {
 		throw new Error('Invalid request: only one authentication method is allowed');
@@ -10,8 +10,8 @@ exports.authorizationParser = function auth({ body, query, headers }) {
 
 	if (clientId) {
 		return {
-			clientId,
-			clientSecret: body.client_secret || query.get('client_secret')
+			id: clientId,
+			secret: body.client_secret || query['client_secret']
 		};
 	}
 
@@ -27,35 +27,13 @@ exports.authorizationParser = function auth({ body, query, headers }) {
 
 		if (!clientInfo[2]) {
 			return {
-				clientId: clientInfo[1]
+				id: clientInfo[1]
 			};
 		}
 
 		return {
-			clientId: clientInfo[1],
-			clientSecret: clientInfo[2]
+			id: clientInfo[1],
+			secret: clientInfo[2]
 		};
 	}
-};
-
-exports.getBody = function DefaultRequestBodyGetter(req) {
-	return function getBody() {
-		const chunks = [];
-
-		return new Promise((resolve, reject) => {
-			req
-				.on('error', error => reject(error))
-				.on('data', chunk => chunks.push(chunk))
-				.on('end', () => {
-					const length = chunks.reduce((length, chunk) => length += chunk.length, 0);
-					const data = Buffer.concat(chunks, length).toString();
-					const search = new URLSearchParams(data);
-					const body = {};
-
-					search.forEach((value, key) => body[key] = value);
-
-					resolve(body);
-				});
-		});
-	};
 };
