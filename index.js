@@ -129,9 +129,7 @@ const OAuth = module.exports = function OAuthHandler(options) {
 	});
 
 	finalOptions.grantTypes.forEach(grantType => {
-		if (grantType.install) {
-			grantType.install({ router });
-		}
+		grantType.install({ router });
 	});
 
 	return router.callback();

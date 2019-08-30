@@ -28,6 +28,12 @@ module.exports = function OAuthOptionsNormalize(options = {}) {
 			client: _client = finalOptions.client
 		} = options;
 
+		_grantTypes.forEach(grantType => {
+			if (!grantType.install) {
+				grantType.install = () => {};
+			}
+		});
+		
 		finalOptions.grantTypes = _grantTypes;
 		finalOptions.prefix = _prefix;
 

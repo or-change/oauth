@@ -24,6 +24,9 @@
 				"allowEmptyState": {
 					"type": "boolean"
 				},
+				"Id": {
+					"instanceof": "Function"
+				},
 				"store": {
 					"addtionalProperties": false,
 					"type": "object",
